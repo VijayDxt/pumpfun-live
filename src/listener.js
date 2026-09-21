@@ -315,8 +315,12 @@ export class PumpfunListener extends EventEmitter {
 
         return this._parseMintFromTx(tx);
       } catch (err) {
+        const errMsg = err?.message || String(err);
+        const isRateLimit = errMsg.includes('429') || errMsg.toLowerCase().includes('too many requests');
+
         if (attempt < GET_TX_MAX_RETRIES) {
-          await sleep(GET_TX_RETRY_DELAY_MS);
+          const delay = isRateLimit ? GET_TX_RETRY_DELAY_MS * Math.pow(2, attempt) : GET_TX_RETRY_DELAY_MS;
+          await sleep(delay);
         } else {
           throw err;
         }

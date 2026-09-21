@@ -45,7 +45,7 @@ function sleep(ms) {
  * On error, returns conservative defaults (both false = flagged as risky)
  * rather than silently assuming the token is safe.
  */
-export async function checkMint(mintAddress, maxRetries = 4, retryDelayMs = 800) {
+export async function checkMint(mintAddress, maxRetries = 6, retryDelayMs = 1000) {
   let mintPubkey;
   try {
     mintPubkey = new PublicKey(mintAddress);
@@ -82,10 +82,13 @@ export async function checkMint(mintAddress, maxRetries = 4, retryDelayMs = 800)
 
       return { mintAuthorityRevoked, freezeAuthorityRevoked };
     } catch (err) {
+      const errMsg = err?.message || String(err);
+      const isRateLimit = errMsg.includes('429') || errMsg.toLowerCase().includes('too many requests');
+
       if (attempt < maxRetries) {
-        await sleep(retryDelayMs);
+        const delay = isRateLimit ? retryDelayMs * Math.pow(2, attempt) : retryDelayMs;
+        await sleep(delay);
       } else {
-        const errMsg = err?.message || String(err);
         console.warn(
           `[checker] Failed to check mint ${mintAddress} after ${maxRetries} attempts: ${errMsg}. ` +
             `Defaulting to risky (not revoked).`
