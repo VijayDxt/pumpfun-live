@@ -44,7 +44,14 @@ function getDb() {
   if (getApps().length === 0) {
     let serviceAccount;
     try {
-      serviceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
+      let rawStr = FIREBASE_SERVICE_ACCOUNT_JSON;
+      try {
+        serviceAccount = JSON.parse(rawStr);
+      } catch {
+        // Fix unescaped newlines/control chars from environment variable inputs
+        rawStr = rawStr.replace(/[\r\n]+/g, '\\n');
+        serviceAccount = JSON.parse(rawStr);
+      }
       if (serviceAccount.private_key) {
         serviceAccount.private_key = normalizePrivateKey(serviceAccount.private_key);
       }
